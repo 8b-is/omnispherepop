@@ -3,6 +3,9 @@ Peter Lodri Sec · 88B (8b-is) · Standard Galactic
 
 # Omnispherepop
 
+[![ci](https://github.com/8b-is/omnispherepop/actions/workflows/ci.yml/badge.svg)](https://github.com/8b-is/omnispherepop/actions/workflows/ci.yml)
+[![pages](https://github.com/8b-is/omnispherepop/actions/workflows/pages.yml/badge.svg)](https://github.com/8b-is/omnispherepop/actions/workflows/pages.yml)
+
 **Weight programming for humans and agents.** Omnispherepop treats neural weights as a
 program instead of an opaque blob: ternary quantization, ultra-graphs, reversible diffs,
 and an academy that teaches by making you move real weights.

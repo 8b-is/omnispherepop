@@ -21,10 +21,26 @@ here only with a command behind it.
 | site generation | `bash scripts/build-site.sh` | 17 lesson pages + index |
 | identity drift | `bash scripts/sync-owners.sh --check` | ok (3 owners, MIT OR Apache-2.0) |
 
+## Verified on CI (2026-11-17, commit ccca78b)
+
+| Job | Result |
+|---|---|
+| `owners` — `sync-owners.sh --check` | pass |
+| `rust` — fmt, clippy `-D warnings`, tests | pass |
+| `cli` — quantize e2e, all lesson checkpoints, MCP handshake (9 tools) | pass |
+| `site` — build, browser kernel parity, static asset checks | pass |
+| `workflows` — actionlint | pass |
+| `pages` — deploy to GitHub Pages | pass, live at https://8b-is.github.io/omnispherepop/ |
+
+Two CI-only bugs were found and fixed here rather than assumed away: `clippy::manual_clear`
+on `Vec::truncate(0)` (newer clippy than the local toolchain), and the actionlint
+download script needing positional `[VERSION] [DEST]` arguments.
+
 ## Not verified here
 
-- **CI runs**: `.github/workflows/ci.yml` is written but has never executed; the jobs
-  above were run as local equivalents, not on GitHub runners.
+- **Codeberg push**: the repository exists at `codeberg.org/8b-is/omnispherepop` but this
+  machine has no Codeberg credentials, so no commit has reached it. The canonical
+  remote is configured; `git push origin main --tags` is the remaining step.
 - **Release binaries**: `release.yml` cross-builds five targets. Only the host build was
   exercised locally; cross-compile success is unverified, and artifacts are unsigned.
 - **Native installers**: no `.msi`, `.dmg`, `.AppImage`, `.deb`, `.rpm` exists.

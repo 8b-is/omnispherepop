@@ -8,8 +8,9 @@ program instead of an opaque blob: ternary quantization, ultra-graphs, reversibl
 and an academy that teaches by making you move real weights.
 
 ```
-trits: 128 bytes vs 2048 float bytes (93.8% smaller)
-sparsity 48.4%  mse 0.3496  scale range [0.0298, 0.0637]
+tensor layer.weight (ternary): 512 values in 4 groups
+trits: 128 bytes vs 2048 float bytes (93.8% smaller, 95.0% with 5-trit packing)
+sparsity 48.4%  mse 0.3496  scale range [1.5010, 1.8202]
 ```
 
 No account, no telemetry, no model download. The demo snapshot is generated
@@ -20,10 +21,14 @@ deterministically, so the terminal, the browser, and CI all see the same numbers
 ```bash
 cargo install --git https://github.com/omnispherepop/omnispherepop --bin ospop
 
-ospop inspect                      # snapshot identity and tensors
-ospop quantize --group-size 128    # ternary PTQ, real size and error numbers
-ospop lens --view ternary --eli5   # the same tensor through the ternary lens
-ospop learn wp.ternary             # a lesson with an observed checkpoint
+ospop inspect                                  # snapshot identity and tensors
+ospop quantize --group-size 128                # ternary PTQ, real size and error numbers
+ospop lens --view ternary --eli5               # the same tensor through the ternary lens
+ospop learn wp.ternary                         # a lesson with an observed checkpoint
+
+ospop --file examples/tiny-gpt2.safetensors inspect
+ospop --file examples/tiny-gpt2.safetensors --json quantize \
+  --tensor transformer.h.0.attn.c_attn.weight --group-size 32
 ```
 
 ## Weight programming, concretely
@@ -35,6 +40,12 @@ ospop learn wp.ternary             # a lesson with an observed checkpoint
 | `diff` | reversible edit set bound to a snapshot identity | `round_trip_ok: true` |
 | `prune` | keep the subgraph reachable from a root ultra-edge | kept/dropped counts, restore check |
 | `learn` | 17 lessons in 5 tracks, each with a checkpoint | per-lesson verdict from the real runtime |
+| `load --file` | read a safetensors checkpoint (dense F32/F16/BF16) | tensor count, snapshot id, strict rejection of malformed files |
+
+Two calibrations ship. `--scheme ternary` thresholds each group at
+Δ = 0.7·mean|w| and keeps a per-group scale. `--scheme qdelta` applies the
+ultra-graph A6P rule in Q16.16, which needs no look at the data. Both report the
+same fields, so you can compare them on one tensor.
 
 Every surface is one `Program` enum plus `Runtime::execute`. The CLI, the MCP server,
 and the browser kernel are adapters over the same operations, and
@@ -53,8 +64,9 @@ printf '%s\n' \
  | ospop-mcp
 ```
 
-Tool names: `ospop_load_demo`, `ospop_inspect`, `ospop_quantize`, `ospop_lens`,
-`ospop_prune`, `ospop_diff`, `ospop_explain`, `ospop_learn`.
+Tool names: `ospop_load_demo`, `ospop_load_safetensors`, `ospop_inspect`,
+`ospop_quantize`, `ospop_lens`, `ospop_prune`, `ospop_diff`, `ospop_explain`,
+`ospop_learn`.
 
 ## Academy
 
@@ -74,6 +86,35 @@ bash scripts/build-site.sh
 python3 -m http.server 8099 --directory site   # then open http://localhost:8099/
 ```
 
+## Ultra-graph
+
+`third_party/ultra-graph` is a submodule. Its `zerocpu` crate supplies two things
+this project uses on the live path: 5-trit packing (1.6 bits per value, denser than
+the core's 4-per-byte codec) and the A6P Q16.16 quantizer behind `--scheme qdelta`.
+`ospop_core::ultragraph` is the bridge, and tests compare its integer dot product
+against naive arithmetic so a kernel mismatch fails loudly.
+
+## Real checkpoint
+
+`examples/tiny-gpt2.safetensors` is a Hugging Face safetensors file: a 2-layer GPT-2
+with 64 tensors, about 454 KB. `crates/ospop-core/tests/real_checkpoint.rs` loads it,
+quantizes a projection, and asserts the measured numbers. The weights are randomly
+initialized, so these are real measurements of a real file — not perplexity, and not
+a quality claim about a trained model. There is no trained checkpoint here yet.
+
+## Coding agents
+
+- `AGENTS.md` — the rules an agent must follow in this repository.
+- `llms.txt` — a compact map of what exists and what does not.
+- `agent-plugin/` — plugin manifest, MCP wiring, and three skills:
+  `omnispherepop` (weight operations), `superpowers-bridge` (process mapped onto this
+  repo's gates), `caveman-comms` (compressed reporting that keeps numbers exact).
+
+```bash
+cargo build --release -p ospop-mcp -p ospop-cli
+bash scripts/install-agent-plugin.sh          # skills into ~/.agents/skills
+```
+
 ## Repository layout
 
 ```
@@ -82,6 +123,9 @@ crates/ospop-runtime    Program enum and Runtime::execute
 crates/ospop-academy    curriculum, lessons, checkpoint verification
 crates/ospop-cli        binary `ospop`
 crates/ospop-mcp        binary `ospop-mcp`, MCP over stdio
+third_party/ultra-graph git submodule: zerocpu kernels (5-trit packing, A6P)
+agent-plugin/           plugin manifest, MCP wiring, agent skills
+examples/               real safetensors checkpoint used by tests
 site/                   landing, sandbox, academy pages
 scripts/                site build, owner drift check, kernel parity check
 docs/                   architecture, roadmap, release status

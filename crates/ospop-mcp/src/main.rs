@@ -4,7 +4,7 @@
 //! stdio JSON-RPC, no runtime dependencies beyond serde_json: the eight tools
 //! all build a `Program` and call the same runtime the CLI uses.
 
-use ospop_runtime::{LensView, Program, Runtime, Threshold};
+use ospop_runtime::{LensView, Program, Runtime, Scheme, Threshold};
 use serde_json::{json, Value};
 use std::io::{self, BufRead, Write};
 
@@ -28,11 +28,18 @@ fn tools() -> Vec<Tool> {
     let tensor = || json!({ "type": "string", "description": "tensor name from ospop_inspect" });
     vec![
         Tool { name: "ospop_load_demo", description: "Load the bundled demo snapshot and return its identity.", input: json!({ "type": "object", "properties": {} }) },
+        Tool { name: "ospop_load_safetensors", description: "Load a safetensors file (F32/F16/BF16 dense tensors) from a local path and return its identity.", input: json!({ "type": "object", "properties": { "path": { "type": "string" } }, "required": ["path"] }) },
         Tool { name: "ospop_inspect", description: "Snapshot identity and tensor shapes.", input: json!({ "type": "object", "properties": {} }) },
         Tool {
             name: "ospop_quantize",
             description: "Ternary PTQ with per-group scales; returns sparsity, packed size, and reconstruction error.",
-            input: json!({ "type": "object", "properties": { "tensor": tensor(), "group_size": { "type": "integer", "default": 128 }, "threshold": { "type": "number", "description": "omit for auto (0.7 * mean |w|)" } }, "required": ["tensor"] }),
+            input: json!({ "type": "object", "properties": {
+                "tensor": tensor(),
+                "group_size": { "type": "integer", "default": 128 },
+                "threshold": { "type": "number", "description": "omit for auto (0.7 * mean |w|)" },
+                "scheme": { "type": "string", "enum": ["ternary", "qdelta"], "default": "ternary" },
+                "level": { "type": "integer", "description": "qdelta A6P detail level, 0..14" }
+            }, "required": ["tensor"] }),
         },
         Tool {
             name: "ospop_lens",
@@ -53,6 +60,15 @@ fn call_tool(rt: &mut Runtime, name: &str, args: &Value) -> Result<Value, String
             rt.load_demo()?;
             return rt.execute(&Program::Inspect);
         }
+        "ospop_load_safetensors" => {
+            let path = s("path", "");
+            let bytes = std::fs::read(&path).map_err(|e| format!("{path}: {e}"))?;
+            let n = rt.load_safetensors(&bytes)?;
+            return rt.execute(&Program::Inspect).map(|mut v| {
+                v["loaded_tensors"] = json!(n);
+                v
+            });
+        }
         "ospop_inspect" => Program::Inspect,
         "ospop_quantize" => Program::Quantize {
             tensor: s("tensor", "layer.weight"),
@@ -65,6 +81,12 @@ fn call_tool(rt: &mut Runtime, name: &str, args: &Value) -> Result<Value, String
                 .and_then(Value::as_f64)
                 .map(|t| Threshold::Fixed(t as f32))
                 .unwrap_or(Threshold::Auto),
+            scheme: match s("scheme", "ternary").as_str() {
+                "qdelta" => Scheme::Qdelta {
+                    level: args.get("level").and_then(Value::as_u64).unwrap_or(6) as usize,
+                },
+                _ => Scheme::Ternary,
+            },
         },
         "ospop_lens" => {
             let view = s("view", "ternary");
@@ -171,14 +193,44 @@ fn main() {
 mod tests {
     use super::*;
 
+    /// Repo-relative path to the committed real safetensors checkpoint.
+    fn model_path() -> String {
+        let root = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/tiny-gpt2.safetensors"
+        );
+        std::fs::canonicalize(root)
+            .unwrap_or_else(|_| root.into())
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    #[test]
+    fn safetensors_tool_loads_real_tensors() {
+        let mut rt = Runtime::new();
+        let v = call_tool(
+            &mut rt,
+            "ospop_load_safetensors",
+            &json!({ "path": model_path() }),
+        )
+        .unwrap();
+        assert_eq!(v["loaded_tensors"], 64, "tiny-random-gpt2 has 64 tensors");
+        assert_eq!(v["tensor_count"], 64);
+    }
+
     #[test]
     fn catalog_matches_the_runtime() {
         let names: Vec<&str> = tools().iter().map(|t| t.name).collect();
-        assert_eq!(names.len(), 8);
-        let mut rt = Runtime::new();
-        rt.load_demo().unwrap();
+        assert_eq!(names.len(), 9);
         for t in &tools() {
-            let args = json!({ "tensor": "layer.weight", "view": "ternary", "topic": "ternary", "root": "layer.weight", "lesson": "wp.ternary" });
+            let mut args = json!({ "tensor": "layer.weight", "view": "ternary", "topic": "ternary", "root": "layer.weight", "lesson": "wp.ternary" });
+            // A fresh session per tool: loading a file replaces the snapshot.
+            let mut rt = Runtime::new();
+            rt.load_demo().unwrap();
+            if t.name == "ospop_load_safetensors" {
+                // Exercise the reader against a real file rather than a stub path.
+                args["path"] = json!(model_path());
+            }
             assert!(call_tool(&mut rt, t.name, &args).is_ok(), "{}", t.name);
         }
     }

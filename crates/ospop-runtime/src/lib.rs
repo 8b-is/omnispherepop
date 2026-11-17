@@ -6,13 +6,17 @@ use ospop_core::{
     quantize,
     snapshot::{Edit, Snapshot},
     ternary::{self, Trit},
+    ultragraph,
 };
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
+/// Calibration rule. `Ternary` is Δ = threshold ?? 0.7·mean|w| per group.
+/// `Qdelta` is the ultra-graph A6P rule from the `zerocpu` submodule.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Scheme {
     Ternary,
+    Qdelta { level: usize },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -28,6 +32,7 @@ pub enum Program {
         tensor: String,
         group_size: usize,
         threshold: Threshold,
+        scheme: Scheme,
     },
     /// Structural view of one tensor slice.
     Lens { tensor: String, view: LensView },
@@ -92,6 +97,29 @@ impl Runtime {
         Ok(())
     }
 
+    /// Load either format the CLI accepts, returning the tensor count.
+    /// safetensors is detected by its JSON header marker at byte 8; anything
+    /// else must parse as the canonical ospop snapshot text.
+    pub fn load_bytes(&mut self, bytes: &[u8]) -> Result<usize, String> {
+        if bytes.len() > 9 && bytes[8] == b'{' {
+            self.load_safetensors(bytes)
+        } else {
+            let snapshot = Snapshot::from_bytes(bytes)?;
+            let count = snapshot.tensors().len();
+            self.snapshot = Some(snapshot);
+            Ok(count)
+        }
+    }
+
+    /// Load a safetensors file. Returns the tensor count.
+    pub fn load_safetensors(&mut self, bytes: &[u8]) -> Result<usize, String> {
+        let tensors = ospop_core::safetensors::read(bytes)?;
+        let count = tensors.len();
+        let snapshot = Snapshot::new(ospop_core::safetensors::into_map(tensors))?;
+        self.snapshot = Some(snapshot);
+        Ok(count)
+    }
+
     pub fn load_snapshot(&mut self, snapshot: Snapshot) {
         self.snapshot = Some(snapshot);
     }
@@ -130,40 +158,103 @@ impl Runtime {
                 tensor,
                 group_size,
                 threshold,
+                scheme,
             } => {
+                if *group_size == 0 {
+                    return Err("group size must be positive".into());
+                }
                 let weights = self.tensor(tensor)?;
-                let threshold = match threshold {
-                    Threshold::Auto => None,
-                    Threshold::Fixed(t) => Some(*t),
+                if weights.is_empty() {
+                    return Err("tensor has no values".into());
+                }
+
+                // Ternary applies the core Δ rule per group. Qdelta applies the
+                // ultra-graph A6P rule per value, so the trit decisions do not
+                // depend on the group; the group only shapes the report.
+                let (trits, scheme_id) = match scheme {
+                    Scheme::Ternary => {
+                        let t = match threshold {
+                            Threshold::Auto => None,
+                            Threshold::Fixed(v) => Some(*v),
+                        };
+                        let groups = quantize::quantize(weights, *group_size, t)?;
+                        (
+                            groups
+                                .iter()
+                                .flat_map(|g| g.trits().iter().copied())
+                                .collect(),
+                            "ternary",
+                        )
+                    }
+                    Scheme::Qdelta { level } => {
+                        (ultragraph::qdelta_quantize(weights, *level)?, "qdelta")
+                    }
                 };
-                let groups = quantize::quantize(weights, *group_size, threshold)?;
-                let total: usize = groups.iter().map(|g| g.trits().len()).sum();
-                let zeros = groups
+
+                // Per-group scale over the surviving weights, then reconstruction.
+                let mut scales = Vec::new();
+                let mut zeros = 0usize;
+                let mut sq_error = 0.0f64;
+                let mut offset = 0usize;
+                for chunk in trits.chunks(*group_size) {
+                    let picked: Vec<f32> = chunk
+                        .iter()
+                        .zip(&weights[offset..offset + chunk.len()])
+                        .filter(|(t, _)| **t != Trit::Zero)
+                        .map(|(_, w)| w.abs())
+                        .collect();
+                    let scale = if picked.is_empty() {
+                        0.0
+                    } else {
+                        picked.iter().map(|w| f64::from(*w)).sum::<f64>() / picked.len() as f64
+                    };
+                    for (t, w) in chunk.iter().zip(&weights[offset..offset + chunk.len()]) {
+                        if *t == Trit::Zero {
+                            zeros += 1;
+                        }
+                        let value = match t {
+                            Trit::Neg => -scale,
+                            Trit::Zero => 0.0,
+                            Trit::Pos => scale,
+                        };
+                        sq_error += (value - f64::from(*w)).powi(2);
+                    }
+                    scales.push(scale as f32);
+                    offset += chunk.len();
+                }
+                let mse = sq_error / trits.len() as f64;
+
+                // The ultra-graph kernel also runs the integer dot product; compare
+                // it against naive integer arithmetic so a mismatch is visible.
+                let window = trits.len().min(64);
+                let acts: Vec<i8> = (0..window).map(|i| (i as i8 % 7) - 3).collect();
+                let packed = ultragraph::dot_ternary_i8(&trits[..window], &acts)?;
+                let naive: i64 = trits[..window]
                     .iter()
-                    .flat_map(|g| g.trits())
-                    .filter(|t| **t == Trit::Zero)
-                    .count();
-                let recon = quantize::reconstruct(&groups);
-                let mse = recon
-                    .iter()
-                    .zip(weights)
-                    .map(|(a, b)| (a - b) * (a - b))
-                    .sum::<f32>()
-                    / total as f32;
-                let scales: Vec<f32> = groups.iter().map(|g| g.scale()).collect();
+                    .zip(&acts)
+                    .map(|(t, a)| match t {
+                        Trit::Neg => -i64::from(*a),
+                        Trit::Zero => 0,
+                        Trit::Pos => i64::from(*a),
+                    })
+                    .sum();
+
                 Ok(json!({
                     "op": "quantize",
-                    "scheme": "ternary",
+                    "scheme": scheme_id,
                     "tensor": tensor,
                     "group_size": group_size,
-                    "values": total,
-                    "groups": groups.len(),
-                    "packed_bytes": ternary::pack(&groups.iter().flat_map(|g| g.trits()).copied().collect::<Vec<_>>()).len(),
-                    "float_bytes": total * 4,
-                    "sparsity": zeros as f32 / total as f32,
+                    "values": trits.len(),
+                    "groups": scales.len(),
+                    "packed_bytes": ternary::pack(&trits).len(),
+                    "packed_bytes_packed5": ultragraph::pack5_trits(&trits).len(),
+                    "float_bytes": trits.len() * 4,
+                    "sparsity": zeros as f64 / trits.len() as f64,
                     "mse": mse,
                     "min_scale": scales.iter().copied().fold(f32::INFINITY, f32::min),
                     "max_scale": scales.iter().copied().fold(0.0f32, f32::max),
+                    "ultragraph_dot_i8": packed,
+                    "ultragraph_dot_matches_scalar": packed == naive,
                 }))
             }
             Program::Lens { tensor, view } => {
@@ -400,6 +491,7 @@ mod tests {
                 tensor: "layer.weight".into(),
                 group_size: 128,
                 threshold: Threshold::Auto,
+                scheme: Scheme::Ternary,
             })
             .unwrap();
         assert!(v["sparsity"].as_f64().unwrap() >= 0.4);
@@ -464,6 +556,7 @@ mod tests {
                 tensor: "layer.weight".into(),
                 group_size: 128,
                 threshold: Threshold::Auto,
+                scheme: Scheme::Ternary,
             })
             .is_err());
     }

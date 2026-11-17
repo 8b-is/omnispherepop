@@ -49,6 +49,42 @@ to `base_id`; `apply` rejects a mismatched base and any shape change, and `rever
 produces a patch from target back to base. All three lessons' `patch-round-trip`
 checkpoints exercise this rather than trusting the diff code.
 
+## Model file IO: safetensors
+
+`ospop_core::safetensors` reads the header (8-byte LE length plus a JSON object),
+validates the tensor table, then decodes payloads. It accepts dense `F32`, `F16`,
+and `BF16` only, and it refuses: unsupported dtypes (naming the key and the dtype),
+shapes whose element count disagrees with the byte range, byte ranges outside the
+buffer, overlapping ranges shared by two tensors, and non-finite values in a decoded
+payload. F16 and BF16 widen exactly, including subnormals and infinities.
+
+Validation is split from decoding on purpose: a malformed header fails before any
+allocation. `Runtime::load_bytes` sniffs the JSON marker at byte 8 to pick between
+safetensors and the canonical ospop snapshot text, so the CLI has one load path.
+
+The committed `examples/tiny-gpt2.safetensors` is a real Hugging Face file (2-layer
+GPT-2, 64 tensors). Its weights are randomly initialized, which is exactly why the
+tests assert measured numbers instead of quality claims.
+
+## Ultra-graph bridge
+
+`ospop_core::ultragraph` wraps the `zerocpu` crate from the `third_party/ultra-graph`
+submodule. Two capabilities are used on the live path:
+
+- **5-trit packing**: `3^5 = 243 < 256`, so five trits fit one byte. Every
+  quantization report carries both `packed_bytes` (4 per byte) and
+  `packed_bytes_packed5`, so the denser codec is a measured difference.
+- **A6P Q-delta quantization**: `delta_for_level` thresholds Q16.16 values with
+  inclusive comparisons, a genuinely different calibration from Δ = 0.7·mean|w|.
+  `--scheme qdelta --level N` selects it.
+
+`zerocpu` contains unsafe kernels, so the bridge validates its inputs at the edge
+before calling in (its `pack5` asserts on non-ternary input, and our public API
+never lets a non-ternary value reach it). The core's own modules stay
+`#![forbid(unsafe_code)]`. Integer dot products from the submodule are checked
+against naive arithmetic in tests, because a silently wrong kernel is worse than a
+slow one.
+
 ## ospop-academy
 
 Lessons are data: id, track, prerequisites, concept, ELI5 card, lab target, lab view,
@@ -82,9 +118,10 @@ behavior the code lacks.
 
 ## What is deliberately absent
 
-- Model file IO (safetensors, GGUF): the runtime loads a deterministic generated
-  snapshot. Readers are a separate planned module, because the format parsers carry
+- GGUF reading: only safetensors is supported. GGUF's quantized block encodings need
   their own validation and fuzz surface.
+- A trained checkpoint: the committed file is real but randomly initialized, so
+  there are no perplexity or task-quality numbers to report.
 - Desktop, WASM builds, Python bindings, native packaging: planned, not faked. See
   `docs/ROADMAP.md` and `docs/STATUS.md`.
 - Real model quality claims: there is no trained model in the repository, so there is no

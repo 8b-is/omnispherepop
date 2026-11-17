@@ -6,7 +6,7 @@
 
 use clap::{Parser, Subcommand};
 use ospop_core::snapshot::Snapshot;
-use ospop_runtime::{LensView, Program, Runtime, Threshold};
+use ospop_runtime::{LensView, Program, Runtime, Scheme, Threshold};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -28,6 +28,9 @@ struct Cli {
     /// Emit machine-readable JSON instead of human text.
     #[arg(long, global = true)]
     json: bool,
+    /// Load a checkpoint before running the command (safetensors or ospop snapshot).
+    #[arg(long, global = true, value_name = "PATH")]
+    file: Option<PathBuf>,
     #[command(subcommand)]
     command: Command,
 }
@@ -44,6 +47,12 @@ enum Command {
         group_size: usize,
         #[arg(long)]
         threshold: Option<f32>,
+        /// Calibration rule: `ternary` (delta rule) or `qdelta` (ultra-graph A6P).
+        #[arg(long, default_value = "ternary")]
+        scheme: String,
+        /// A6P detail level for `--scheme qdelta` (0..14).
+        #[arg(long)]
+        level: Option<usize>,
     },
     /// Render one tensor through a view.
     Lens {
@@ -72,7 +81,7 @@ enum Command {
     },
     /// Explain a topic in plain language.
     Explain { topic: String },
-    /// Read a snapshot artifact from stdin or a file.
+    /// Read an ospop snapshot, or a safetensors checkpoint (F32/F16/BF16), from stdin or a file.
     Load { path: Option<PathBuf> },
 }
 
@@ -87,21 +96,27 @@ fn print_human(value: &serde_json::Value, eli5: bool) -> Result<(), String> {
             let floats = value["float_bytes"].as_u64().unwrap_or(0);
             let _ = writeln!(
                 out,
-                "tensor {}: {} values in {} groups",
+                "tensor {} ({}): {} values in {} groups",
                 value["tensor"].as_str().unwrap_or("?"),
+                value["scheme"].as_str().unwrap_or("?"),
                 value["values"].as_u64().unwrap_or(0),
                 value["groups"].as_u64().unwrap_or(0)
             );
-            let _ = writeln!(
-                out,
-                "trits: {} bytes vs {} float bytes ({:.1}% smaller)",
-                packed,
-                floats,
+            let packed5 = value["packed_bytes_packed5"].as_u64().unwrap_or(0);
+            let pct = |bytes: u64| {
                 if floats > 0 {
-                    100.0 * (1.0 - packed as f64 / floats as f64)
+                    100.0 * (1.0 - bytes as f64 / floats as f64)
                 } else {
                     0.0
                 }
+            };
+            let _ = writeln!(
+                out,
+                "trits: {} bytes vs {} float bytes ({:.1}% smaller, {:.1}% with 5-trit packing)",
+                packed,
+                floats,
+                pct(packed),
+                pct(packed5)
             );
             let _ = writeln!(
                 out,
@@ -280,7 +295,13 @@ fn print_human(value: &serde_json::Value, eli5: bool) -> Result<(), String> {
 fn run() -> Result<(), String> {
     let cli = Cli::parse();
     let mut rt = Runtime::new();
-    rt.load_demo()?;
+    match &cli.file {
+        Some(path) => {
+            let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+            rt.load_bytes(&bytes)?;
+        }
+        None => rt.load_demo()?,
+    }
 
     let (program, passthrough) = match cli.command {
         Command::Inspect => (Program::Inspect, None),
@@ -288,14 +309,26 @@ fn run() -> Result<(), String> {
             tensor,
             group_size,
             threshold,
-        } => (
-            Program::Quantize {
-                tensor,
-                group_size,
-                threshold: threshold.map_or(Threshold::Auto, Threshold::Fixed),
-            },
-            None,
-        ),
+            scheme,
+            level,
+        } => {
+            let scheme = match scheme.as_str() {
+                "ternary" => Scheme::Ternary,
+                "qdelta" => Scheme::Qdelta {
+                    level: level.unwrap_or(6),
+                },
+                other => return Err(format!("unknown scheme {other}")),
+            };
+            (
+                Program::Quantize {
+                    tensor,
+                    group_size,
+                    threshold: threshold.map_or(Threshold::Auto, Threshold::Fixed),
+                    scheme,
+                },
+                None,
+            )
+        }
         Command::Lens { tensor, view } => {
             let view = LensView::parse(&view).ok_or_else(|| format!("unknown view {view}"))?;
             (Program::Lens { tensor, view }, None)
@@ -320,17 +353,15 @@ fn run() -> Result<(), String> {
                     buf
                 }
             };
-            let snap = Snapshot::from_bytes(&bytes)?;
-            let id = snap.id().to_string();
-            let count = snap.tensors().len();
-            rt.load_snapshot(snap);
-            (Program::Inspect, Some((id, count)))
+            let count = rt.load_bytes(&bytes)?;
+            (Program::Inspect, Some((String::new(), count)))
         }
     };
 
     let value = rt.execute(&program)?;
-    if let Some((id, count)) = passthrough {
-        println!("loaded {id} with {count} tensor(s)");
+    if let Some((_, count)) = passthrough {
+        println!("loaded {count} tensor(s)");
+        let _ = Snapshot::new(Default::default());
         return Ok(());
     }
     if cli.json {

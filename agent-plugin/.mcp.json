@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "omnispherepop": {
+      "command": "ospop-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

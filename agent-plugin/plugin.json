@@ -1,0 +1,38 @@
+{
+  "name": "omnispherepop",
+  "version": "0.1.0",
+  "description": "Weight programming for humans and agents: ternary quantization, ultra-graphs, reversible weight diffs, and an academy of labs that verify real checkpoints.",
+  "license": "MIT OR Apache-2.0",
+  "authors": ["Peter Lodri Sec", "88B (8b-is)", "Standard Galactic"],
+  "homepage": "https://github.com/omnispherepop/omnispherepop",
+  "entrypoints": {
+    "mcp": "ospop-mcp",
+    "cli": "ospop"
+  },
+  "mcpServers": {
+    "omnispherepop": {
+      "command": "ospop-mcp",
+      "args": [],
+      "env": {}
+    }
+  },
+  "skills": [
+    "skills/omnispherepop/SKILL.md",
+    "skills/superpowers-bridge/SKILL.md",
+    "skills/caveman-comms/SKILL.md"
+  ],
+  "commands": [
+    {
+      "name": "ospop:quantize",
+      "description": "Ternarize a tensor and report measured size, sparsity, and error."
+    },
+    {
+      "name": "ospop:learn",
+      "description": "Run an Academy lesson lab and report its checkpoint verdict."
+    },
+    {
+      "name": "ospop:diff",
+      "description": "Diff a tensor against a scaled copy and prove the patch reverses."
+    }
+  ]
+}

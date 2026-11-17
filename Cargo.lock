@@ -210,7 +210,9 @@ dependencies = [
 name = "ospop-core"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "sha2",
+ "zerocpu",
 ]
 
 [[package]]
@@ -360,6 +362,10 @@ checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
 dependencies = [
  "windows-link",
 ]
+
+[[package]]
+name = "zerocpu"
+version = "0.9.1"
 
 [[package]]
 name = "zmij"

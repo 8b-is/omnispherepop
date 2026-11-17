@@ -1,0 +1,62 @@
+# Omnispherepop
+
+> Weight programming for humans and agents: ternary quantization, ultra-graphs,
+> reversible weight diffs, and an academy that teaches by making you move real
+> weights. Rust core, thin adapters, zero accounts, zero telemetry.
+
+Omnispherepop is a mutual product of Peter Lodri Sec, 88B (8b-is), and Standard
+Galactic. Licensed MIT OR Apache-2.0.
+
+## What this file is
+
+`llms.txt` is a compact map for language models and coding agents: what the project
+is, where the truth lives, and what the current capabilities actually are. It is
+generated from the same facts as the README, and `docs/STATUS.md` is the authority
+when they disagree.
+
+## Start here
+
+- [README.md](https://github.com/omnispherepop/omnispherepop/blob/main/README.md): 30-second tour, install, agent usage
+- [AGENTS.md](https://github.com/omnispherepop/omnispherepop/blob/main/AGENTS.md): rules for coding agents working in this repo
+- [docs/STATUS.md](https://github.com/omnispherepop/omnispherepop/blob/main/docs/STATUS.md): what is verified, what is not
+- [docs/ARCHITECTURE.md](https://github.com/omnispherepop/omnispherepop/blob/main/docs/ARCHITECTURE.md): invariants, module seams, why one operation set
+- [docs/ROADMAP.md](https://github.com/omnispherepop/omnispherepop/blob/main/docs/ROADMAP.md): what comes next, in dependency order
+- [docs/CURRICULUM.md](https://github.com/omnispherepop/omnispherepop/blob/main/docs/CURRICULUM.md): all 17 lessons with prerequisites and checkpoints
+
+## Capabilities (current)
+
+- Ternary quantization to `{-1, 0, +1}` with per-group scales; reports sparsity,
+  packed bytes, and RMSE computed from the data.
+- Two calibrations: `ternary` (Δ = 0.7·mean|w| per group) and `qdelta` (the
+  ultra-graph A6P Q16.16 rule, from the `zerocpu` submodule).
+- Two ternary packings: 4 trits per byte (core) and 5 trits per byte (ultra-graph).
+- Immutable content-addressed snapshots with reversible diffs.
+- Ultra-graphs with set-to-set edges and fixed-point reachability.
+- safetensors reading for dense F32/F16/BF16 tensors, with strict rejection of
+  unsupported dtypes, overlapping ranges, and non-finite payloads.
+- A committed real checkpoint, `examples/tiny-gpt2.safetensors`, used by tests.
+- MCP server over stdio with nine tools; ACP, desktop, and WASM are not built.
+- A static site with a browser reference kernel that is parity-checked against Rust.
+
+## Not available
+
+No desktop app, no Python package on PyPI, no WASM build, no native installers, no
+ACP endpoint, no GGUF reader, no trained model, and no published quality benchmark.
+`docs/STATUS.md` records these as open rather than done.
+
+## Machine-readable entry points
+
+- MCP: run `ospop-mcp` and speak JSON-RPC over stdio. `tools/list` returns nine
+  tools: `ospop_load_demo`, `ospop_load_safetensors`, `ospop_inspect`,
+  `ospop_quantize`, `ospop_lens`, `ospop_prune`, `ospop_diff`, `ospop_explain`,
+  `ospop_learn`.
+- CLI: every command has a `--json` form; parse it instead of the text output.
+  `ospop learn --json` returns the whole curriculum with checkpoints.
+- Agent plugin: `agent-plugin/` contains a plugin manifest, MCP wiring, and skills
+  for harnesses that support them.
+
+## Citation
+
+```
+Omnispherepop — a mutual product of Peter Lodri Sec, 88B (8b-is), Standard Galactic
+```

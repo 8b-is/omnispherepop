@@ -13,16 +13,24 @@ tier above it starts.
 - 17 lessons with observed checkpoints
 - Static site generated from the CLI, with a browser reference kernel checked against Rust
 
+## Now (second tier, landed)
+
+- safetensors reader for dense F32/F16/BF16 with strict rejection of unsupported
+  dtypes, overlapping ranges, and non-finite payloads
+- 5-trit packing and the A6P quantizer via the `ultra-graph` submodule
+- A committed real checkpoint (`examples/tiny-gpt2.safetensors`) under test
+
 ## Next tier — model file IO (unblocks everything below)
 
-- safetensors reader/writer for a documented dense F32/F16 subset; reject unsupported
-  dtype and shape without partial reads
+- safetensors *writer* with quantized sidecar scales, so a ternarized tensor can be
+  written back instead of only measured
 - GGUF reader for a validated subset with explicit rejection of quantized block
   encodings
 - Hash-verified chunk storage behind the snapshot format, so the current canonical
   demo encoding is superseded rather than extended
-- A real, licensed, small checkpoint committed for the academy labs, replacing the
-  generated demo weights; academy lessons keep their checkpoints, gain real RMSE numbers
+- A trained, licensed, small checkpoint committed for the academy labs, replacing both
+  the generated demo weights and the randomly initialized file; academy lessons keep
+  their checkpoints and gain real RMSE numbers
 
 ## Then — surfaces
 

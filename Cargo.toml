@@ -1,6 +1,7 @@
 [workspace]
 members = ["crates/ospop-core", "crates/ospop-academy", "crates/ospop-runtime", "crates/ospop-cli", "crates/ospop-mcp"]
 resolver = "2"
+exclude = ["third_party"]
 
 [workspace.package]
 version = "0.1.0"
@@ -15,5 +16,6 @@ ospop-core = { path = "crates/ospop-core" }
 ospop-academy = { path = "crates/ospop-academy" }
 ospop-runtime = { path = "crates/ospop-runtime" }
 sha2 = "0.10"
+zerocpu = { path = "third_party/ultra-graph/rust/zerocpu" }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }

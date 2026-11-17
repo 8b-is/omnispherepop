@@ -37,6 +37,8 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
       - name: cross toolchain
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |

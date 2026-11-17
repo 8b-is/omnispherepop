@@ -20,7 +20,16 @@ cp "target/$target/release/ospop-mcp$exe" "$stage/" 2>/dev/null || cp "target/re
 cp README.md LICENSE-MIT LICENSE-APACHE "$stage/"
 
 if [[ "$ext" == "zip" ]]; then
-  (cd "dist/$target" && zip -qr "omnispherepop-$target.zip" omnispherepop)
+  if command -v zip >/dev/null 2>&1; then
+    (cd "dist/$target" && zip -qr "omnispherepop-$target.zip" omnispherepop)
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    # Windows runners have no `zip`; Compress-Archive is the equivalent.
+    powershell.exe -NoProfile -Command \
+      "Compress-Archive -Path 'dist/$target/omnispherepop' -DestinationPath 'dist/$target/omnispherepop-$target.zip' -Force"
+  else
+    printf 'no zip tool available for %s\n' "$target" >&2
+    exit 1
+  fi
 else
   tar -czf "dist/$target/omnispherepop-$target.tar.gz" -C "dist/$target" omnispherepop
 fi

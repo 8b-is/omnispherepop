@@ -26,10 +26,6 @@ jobs:
             os: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-          - target: x86_64-apple-darwin
-            os: macos-15-intel
-          - target: aarch64-apple-darwin
-            os: macos-14
           - target: x86_64-pc-windows-msvc
             os: windows-latest
     steps:
@@ -58,4 +54,42 @@ jobs:
         with:
           name: omnispherepop-${{ matrix.target }}
           path: dist/${{ matrix.target }}/*
+          if-no-files-found: error
+
+  # One macOS job builds both arches and lipo-merges them. Two separate macOS
+  # matrix jobs kept getting cancelled for runner capacity, and a universal
+  # binary is what the docs promise anyway.
+  apple:
+    name: aarch64+x86_64-apple-darwin (universal)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - name: build both arches
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo build --release -p ospop-cli -p ospop-mcp --target aarch64-apple-darwin
+          cargo build --release -p ospop-cli -p ospop-mcp --target x86_64-apple-darwin
+      - name: lipo
+        run: |
+          mkdir -p dist/universal
+          lipo -create -output dist/universal/ospop \
+            target/aarch64-apple-darwin/release/ospop \
+            target/x86_64-apple-darwin/release/ospop
+          lipo -create -output dist/universal/ospop-mcp \
+            target/aarch64-apple-darwin/release/ospop-mcp \
+            target/x86_64-apple-darwin/release/ospop-mcp
+          file dist/universal/ospop
+          dist/universal/ospop --version
+      - name: package
+        run: |
+          mkdir -p dist/universal/omnispherepop
+          cp dist/universal/ospop dist/universal/ospop-mcp README.md LICENSE-MIT LICENSE-APACHE dist/universal/omnispherepop/
+          tar -czf dist/universal/omnispherepop-aarch64+x86_64-apple-darwin.tar.gz -C dist/universal omnispherepop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omnispherepop-aarch64+x86_64-apple-darwin
+          path: dist/universal/*.tar.gz
           if-no-files-found: error

@@ -106,6 +106,7 @@ a quality claim about a trained model. There is no trained checkpoint here yet.
 
 - `AGENTS.md` — the rules an agent must follow in this repository.
 - `llms.txt` — a compact map of what exists and what does not.
+- `docs/adr/` — why one operation set, and why ultra-graph is a submodule.
 - `agent-plugin/` — plugin manifest, MCP wiring, and three skills:
   `omnispherepop` (weight operations), `superpowers-bridge` (process mapped onto this
   repo's gates), `caveman-comms` (compressed reporting that keeps numbers exact).
@@ -133,19 +134,25 @@ docs/                   architecture, roadmap, release status
 
 ## Publishing
 
-Three homes, because ownership is joint: the GitHub org is canonical, a personal
-GitHub account mirrors it, and Codeberg mirrors it for anyone who wants a non-US host.
+Three homes, because ownership is joint. **Codeberg is canonical**
+(`codeberg.org/8b-is/omnispherepop`); GitHub carries two mirrors for reach, one per
+owner account.
+
+| Host | Repository | Role |
+|---|---|---|
+| Codeberg | https://codeberg.org/8b-is/omnispherepop | canonical, receives tags first |
+| GitHub | https://github.com/8b-is/omnispherepop | mirror |
+| GitHub | https://github.com/peterlodri-sec/omnispherepop | mirror |
 
 ```bash
-bash scripts/setup-remotes.sh --with-codeberg   # wire origin, peter, codeberg
+bash scripts/setup-remotes.sh --with-codeberg   # wire origin (canonical), 8b-is, peter
 git push -u origin main --tags                  # canonical first
+git push 8b-is main --tags
 git push peter main --tags
-git push codeberg main --tags
 ```
 
-Creating those repositories is an owner action; this script only wires URLs. Until
-they exist, the repository is local only — no tag has been pushed, and no release
-claims have been made.
+`scripts/sync-owners.sh --check` fails if a URL drifts or a mirror is dropped from
+this table or from `OWNERS.toml`.
 
 ## Governance
 

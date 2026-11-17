@@ -1,65 +1,70 @@
 #!/usr/bin/env bash
 # Wire the three homes this project is published to.
 #
-# GitHub carries two mirrors because ownership is joint: the org is canonical,
-# the personal account is a co-owner mirror. Codeberg mirrors the repository for
-# anyone who wants a non-US host. All three receive the same tags.
+# Codeberg is canonical (the repository exists there and ownership is joint).
+# GitHub carries two mirrors for reach: the 8b-is org and the personal account.
+# All three receive the same tags. URLs come from OWNERS.toml, which is the single
+# source of identity; this script never hardcodes them.
 #
-# Usage: scripts/setup-remotes.sh [--with-codeberg] [--ssh]
+# Usage: scripts/setup-remotes.sh [--ssh]
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
-org=$(sed -n 's/^org = "\(.*\)"$/\1/p' OWNERS.toml | head -1)
+canonical=$(sed -n 's/^repo = "\(.*\)"$/\1/p' OWNERS.toml | head -1)
 scheme=https
-with_codeberg=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --with-codeberg) with_codeberg=1; shift ;;
-    --ssh) scheme=git; shift ;;
+    --ssh) scheme=git ;;
     *) printf 'unknown flag %s\n' "$1" >&2; exit 2 ;;
   esac
+  shift
 done
 
-if [[ "$scheme" == ssh ]]; then
-  base="git@github.com"
-  cb="git@codeberg.org"
-else
-  base="https://github.com"
-  cb="https://codeberg.org"
-fi
+# Turn a URL into an SSH equivalent when asked: host/path -> git@host:path
+to_ssh() {
+  printf '%s' "$1" | sed -E 's#^https://([^/]+)/#git@\1:#'
+}
+
+name_for() {
+  case "$1" in
+    *codeberg.org*) printf 'origin' ;;
+    */8b-is/*) printf '8b-is' ;;
+    */peterlodri-sec/*) printf 'peter' ;;
+    *) printf 'mirror' ;;
+  esac
+}
 
 add_remote() {
   local name="$1" url="$2"
+  if [[ "$scheme" == git ]]; then url="$(to_ssh "$url").git"; else url="$url.git"; fi
   if git remote get-url "$name" >/dev/null 2>&1; then
     git remote set-url "$name" "$url"
-    printf 'updated %s -> %s\n' "$name" "$url"
+    printf 'updated %-8s %s\n' "$name" "$url"
   else
     git remote add "$name" "$url"
-    printf 'added   %s -> %s\n' "$name" "$url"
+    printf 'added   %-8s %s\n' "$name" "$url"
   fi
 }
 
-add_remote origin "$base/$org/omnispherepop.git"
-add_remote peter "$base/peterlodri-sec/omnispherepop.git"
-if [[ $with_codeberg -eq 1 ]]; then
-  add_remote codeberg "$cb/$org/omnispherepop.git"
-fi
+add_remote "$(name_for "$canonical")" "$canonical"
+while IFS= read -r url; do
+  [[ -n "$url" ]] && add_remote "$(name_for "$url")" "$url"
+done < <(awk '/^\[\[mirror\]\]/{f=1;next} /^\[/{f=0} f && /^url = /{sub(/^url = "/,""); sub(/"$/,""); print}' OWNERS.toml)
 
 cat <<EOF
 
 Remotes:
-$(git remote -v)
-
-Publishing order matters. The org repository is canonical, so push there first:
-
-  git push -u origin main --tags
-  git push peter main --tags
 EOF
-[[ $with_codeberg -eq 1 ]] && printf '  git push codeberg main --tags\n'
-cat <<'EOF'
+git remote -v | sed 's/^/  /'
+cat <<EOF
 
-Each remote must exist before you push. Creating them is an owner action: the org
-repo needs an owner of the GitHub organization, and the Codeberg mirror needs an
-owner account there. This script only wires URLs; it never creates repositories.
+Publish order — canonical first so the mirrors never lead:
+
+  git push -u origin main
+  git push 8b-is main
+  git push peter main
+  git push origin --tags      # tags only after CI is green on the canonical host
+
+This script wires URLs; it does not create repositories or push anything.
 EOF

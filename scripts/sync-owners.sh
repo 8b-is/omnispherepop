@@ -51,8 +51,15 @@ for f in LICENSE-MIT LICENSE-APACHE; do
   grep -qF "$copyright_holders" "$f" || note "$f missing joint copyright holders ($copyright_holders)"
 done
 
-# 5. README must point at the org repo.
-grep -q "github.com/$org/omnispherepop" README.md || note "README missing org repo URL"
+# 5. README must point at the canonical repo, and every mirror must be named.
+grep -qF "$repo" README.md || note "README missing canonical repo URL ($repo)"
+while IFS= read -r url; do
+  [[ -n "$url" ]] || continue
+  grep -qF "$url" README.md || note "README missing mirror URL $url"
+done < <(awk '/^\[\[mirror\]\]/{f=1;next} /^\[/{f=0} f && /^url = /{sub(/^url = "/,""); sub(/"$/,""); print}' OWNERS.toml)
+
+# 6. The submodule must point at the jointly owned ultra-graph, not a fork.
+grep -q "8b-is/ultra-graph" .gitmodules || note ".gitmodules does not point at 8b-is/ultra-graph"
 
 set -u
 

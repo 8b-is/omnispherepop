@@ -8,7 +8,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Peter Lodri Sec", "88B (8b-is)", "Standard Galactic"]
-repository = "https://github.com/omnispherepop/omnispherepop"
+repository = "https://codeberg.org/8b-is/omnispherepop"
 rust-version = "1.78"
 
 [workspace.dependencies]

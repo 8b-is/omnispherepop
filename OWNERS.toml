@@ -4,10 +4,23 @@
 
 [project]
 name = "omnispherepop"
-org = "omnispherepop"
-repo = "https://github.com/omnispherepop/omnispherepop"
+org = "8b-is"
+repo = "https://codeberg.org/8b-is/omnispherepop"
 license = "MIT OR Apache-2.0"
 copyright = "Copyright 2026 Peter Lodri Sec, 88B (8b-is), Standard Galactic"
+
+# Codeberg is canonical because the repository exists there and the project is
+# jointly owned. GitHub mirrors exist for reach; they receive the same tags.
+# Identity drift for every URL below is enforced by scripts/sync-owners.sh.
+[[mirror]]
+host = "github"
+org = "8b-is"
+url = "https://github.com/8b-is/omnispherepop"
+
+[[mirror]]
+host = "github"
+org = "peterlodri-sec"
+url = "https://github.com/peterlodri-sec/omnispherepop"
 
 [[owner]]
 name = "Peter Lodri Sec"

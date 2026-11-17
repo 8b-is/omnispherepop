@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sparsity and ultra-edge cuts — Omnispherepop Academy</title>
+<link rel="stylesheet" href="../assets/site.css" />
+</head>
+<body>
+<header class="masthead">
+  <a class="mark" href="../index.html">omnispherepop</a>
+  <nav><a href="../index.html#sandbox">Sandbox</a><a href="../index.html#academy">Academy</a></nav>
+</header>
+<main>
+<section class="hero">
+  <p class="kicker">weight-programming · wp.pruning</p>
+  <h1>Sparsity and ultra-edge cuts</h1>
+  <p class="muted">Prerequisites: <a href="dl.attention.html">dl.attention</a>, <a href="wp.ternary.html">wp.ternary</a></p>
+</section>
+<section class="panel">
+  <h2>Concept</h2>
+  <p>Pruning removes coordinates and edges while preserving invariants.</p>
+  <h2>ELI5</h2>
+  <p id="eli5">Cutting roads only helps if the towns you care about stay connected.</p>
+  <h2>Lab</h2>
+  <p class="muted">Lab target <code>layer.weight</code> through the
+  <code>graph</code> lens. The live lens below uses the same kernel as the CLI.</p>
+  <div id="lens"></div>
+  <pre class="install">ospop learn wp.pruning</pre>
+  <p id="checkpoint" class="muted">checkpoint: pending</p>
+</section>
+</main>
+<script type="module">
+import { demoWeights, stats, tritsOf, glyph } from '../assets/ospop.js';
+const lens = document.getElementById('lens');
+const s = stats(demoWeights(), 128, null);
+const trits = tritsOf(demoWeights(), 128, null);
+lens.innerHTML =
+  '<div class="readouts">' +
+  [['sparsity', (s.sparsity * 100).toFixed(1) + '%'], ['trits', s.packedBytes + ' B'], ['rmse', s.rmse.toFixed(4)]]
+    .map(([k, v]) => '<div><b>' + v + '</b><span>' + k + '</span></div>')
+    .join('') +
+  '</div><div class="trit-grid">' +
+  trits.map((t) => '<span class="' + (t < 0 ? 'neg' : t > 0 ? 'pos' : 'zero') + '">' + glyph(t) + '</span>').join('') +
+  '</div>';
+document.getElementById('checkpoint').textContent =
+  'checkpoint: ' + (s.sparsity >= 0.4 ? 'satisfied in-browser' : 'run in the CLI for the authoritative verdict');
+</script>
+</body>
+</html>

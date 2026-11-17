@@ -5,9 +5,9 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
-authors = ["Peter Lodri Sec"]
-repository = "https://github.com/peterlodrisec/omnispherepop"
+license = "MIT OR Apache-2.0"
+authors = ["Peter Lodri Sec", "88B (8b-is)", "Standard Galactic"]
+repository = "https://github.com/omnispherepop/omnispherepop"
 rust-version = "1.78"
 
 [workspace.dependencies]

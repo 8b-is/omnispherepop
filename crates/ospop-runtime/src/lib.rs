@@ -305,6 +305,10 @@ impl Runtime {
                                 "title": l.title,
                                 "track": l.track.id(),
                                 "prerequisites": l.prerequisites,
+                                "concept": l.concept,
+                                "eli5": l.eli5,
+                                "lab_target": l.lab_target,
+                                "checkpoint": l.checkpoint_id(),
                                 "lab_view": match l.lab_view {
                                     ospop_academy::View::Ternary => "ternary",
                                     ospop_academy::View::Heatmap => "heatmap",

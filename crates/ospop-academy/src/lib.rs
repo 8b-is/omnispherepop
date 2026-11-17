@@ -81,6 +81,17 @@ impl Lesson {
     pub fn lab_view_id(&self) -> &'static str {
         self.lab_view.id()
     }
+
+    /// Stable identifier for the lesson's checkpoint rule, for cross-surface parity.
+    pub fn checkpoint_id(&self) -> &'static str {
+        match self.checkpoint {
+            Checkpoint::SparsityAtLeast { .. } => "sparsity-at-least",
+            Checkpoint::ScalesPositive { .. } => "scales-positive",
+            Checkpoint::ReconstructionErrorAtMost { .. } => "reconstruction-error-at-most",
+            Checkpoint::PatchRoundTrip => "patch-round-trip",
+            Checkpoint::GraphFullyReachable => "graph-fully-reachable",
+        }
+    }
 }
 
 /// Lesson content. Every lab binds to a real slice of the demo snapshot.

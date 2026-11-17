@@ -10,6 +10,26 @@ Approved by the user on 2026-11-17 with the instruction: "call it omnispherepop,
 6. Progress summaries requested periodically to WhatsApp group `little dudes` and/or iMessage `dra+8bit-wraith`. Target every 30 minutes during active execution and at major milestones. Send only after an authenticated transport and unique destination match are verified. Do not guess handles, message unrelated contacts, expose secrets or private code, or install an unverified messaging bridge. Until verified, report here and record messages as unsent. No timer delivery guarantee without a running scheduler.
 7. Full original release gates remain in force. First implementation milestone is a tested CPU reference core and offline CLI; it is not a replacement definition of full v1.0.
 
+## Sections 13-17: joint ownership (binding)
+
+Adopted after the source design; supersedes every personal-account ruling above.
+
+- **Joint owners:** Peter Lodri Sec (`PeterLodriSec`), 88B (`8b-is`), Standard Galactic
+  (`StandardGalactic`), all holding `owner` on the `omnispherepop` organization.
+- **Repository:** `https://github.com/omnispherepop/omnispherepop`. Every
+  `peterlodrisec/...` reference is struck.
+- **Licensing:** `MIT OR Apache-2.0`, joint copyright line
+  `Copyright 2026 Peter Lodri Sec, 88B (8b-is), Standard Galactic` in both files.
+- **Governance:** `GOVERNANCE.md`, lazy consensus at 72 hours, unanimous consent for
+  license/rename/trademark/owner changes, security hotfix bypass with 24-hour
+  retro-notice, no hostile ouster.
+- **Trademark:** jointly held; code forkable, brand not; forks must rebrand
+  (`TRADEMARK.md`). Domain jointly administered; publish blocker, not freeze blocker.
+- **Identity:** `OWNERS.toml` is the single source of truth; drift enforced by
+  `scripts/sync-owners.sh --check` in CI.
+- **Co-branding:** README footer, site footer, `ospop --version`.
+- **Commercial terms:** private operating agreement, never public repo content.
+
 ## Execution rulings
 
 - No native subagent tool is exposed. Execute test-first inline unless a verified external worker can be safely bounded to an isolated worktree. Fresh-context Ollama review is optional; local model availability does not imply a coding agent is configured.

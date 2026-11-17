@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Omnispherepop — program real neural weights</title>
+<meta name="description" content="Ternary quantization, ultra-graphs, and reversible weight diffs in your terminal, your browser, or from your agent." />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+<header class="masthead">
+  <a class="mark" href="/">omnispherepop</a>
+  <nav><a href="#sandbox">Sandbox</a><a href="#academy">Academy</a><a href="#install">Install</a><a href="#compare">Why</a></nav>
+</header>
+
+<main>
+<section class="hero">
+  <p class="kicker">Weight programming for humans and agents</p>
+  <h1>Turn a weight matrix into three symbols.<br /><span class="dim">Keep the behaviour. Lose the bytes.</span></h1>
+  <p class="lede">
+    Omnispherepop treats weights as a program: quantize to <code>{-1, 0, +1}</code>,
+    diff two snapshots with a reversible receipt, prune across ultra-edges, and let an
+    agent drive the same operations over MCP.
+  </p>
+  <div class="cta"><a class="btn" href="#sandbox">Run the sandbox</a><a class="btn ghost" href="#install">cargo install</a></div>
+  <pre id="hero-trits" class="trits" aria-hidden="true"></pre>
+</section>
+
+<section id="sandbox" class="panel">
+  <h2>Live ternary sandbox</h2>
+  <p class="muted">Real quantization of a 512-value tensor, computed in your browser with the same rule as the Rust kernel.</p>
+  <div class="controls">
+    <label>threshold Δ <input id="threshold" type="range" min="0" max="1.5" step="0.01" value="0.7" /><span class="readout" id="threshold-readout">auto</span></label>
+    <label>group size
+      <select id="group-size">
+        <option value="32">32</option>
+        <option value="64">64</option>
+        <option value="128" selected>128</option>
+        <option value="256">256</option>
+      </select>
+    </label>
+  </div>
+  <div class="readouts" id="readouts"></div>
+  <div class="trit-grid" id="trit-grid" role="img" aria-label="Ternary view of the tensor"></div>
+  <div class="hist" id="histogram" role="img" aria-label="Per-group sparsity histogram"></div>
+</section>
+
+<section id="academy" class="panel">
+  <h2>Academy</h2>
+  <p class="muted">Every lesson runs a lab against real weights and verifies an observed checkpoint — never a quiz.</p>
+  <ul id="lesson-list" class="lessons"></ul>
+</section>
+
+<section id="install" class="panel">
+  <h2>Install</h2>
+  <pre class="install">cargo install --git https://github.com/omnispherepop/omnispherepop --bin ospop</pre>
+  <p class="muted">Release binaries for Windows, macOS, and Linux are published with tagged releases; source install needs Rust 1.78+.</p>
+  <pre class="install">ospop quantize --tensor layer.weight --group-size 128
+ospop lens --view ternary --eli5
+ospop learn wp.ternary</pre>
+</section>
+
+<section id="compare" class="panel">
+  <h2>Opaque tensor soup vs. weight programming</h2>
+  <table class="compare">
+    <thead><tr><th></th><th>Tensor soup</th><th>Omnispherepop</th></tr></thead>
+    <tbody>
+      <tr><td>Weight format</td><td>opaque blob</td><td>addressable tensors, 2-bit trits</td></tr>
+      <tr><td>Change tracking</td><td>copy the file</td><td>reversible patch bound to a snapshot id</td></tr>
+      <tr><td>Structure</td><td>none</td><td>ultra-edges from vertex sets to vertex sets</td></tr>
+      <tr><td>Teaching</td><td>slides</td><td>17 labs with observed checkpoints</td></tr>
+      <tr><td>Automation</td><td>bespoke scripts</td><td>MCP tools over the same runtime</td></tr>
+    </tbody>
+  </table>
+</section>
+</main>
+
+<footer>
+  <p>Omnispherepop — a mutual product of
+    <a href="https://github.com/PeterLodriSec">Peter Lodri Sec</a> ·
+    <a href="https://github.com/8b-is">88B (8b-is)</a> ·
+    <a href="https://github.com/StandardGalactic">Standard Galactic</a></p>
+  <p class="muted">MIT OR Apache-2.0 · no accounts, no telemetry</p>
+</footer>
+<script type="module" src="assets/app.js"></script>
+</body>
+</html>

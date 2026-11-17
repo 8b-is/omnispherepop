@@ -1,0 +1,225 @@
+{
+  "lessons": [
+    {
+      "checkpoint": "scales-positive",
+      "concept": "A weight is one number in a matrix that scales a signal.",
+      "eli5": "A weight is a volume knob on one wire. Programming weights means turning knobs on purpose instead of hoping.",
+      "id": "found.tensor",
+      "lab_target": "layer.weight",
+      "lab_view": "heatmap",
+      "prerequisites": [],
+      "title": "What is a weight?",
+      "track": "foundations"
+    },
+    {
+      "checkpoint": "reconstruction-error-at-most",
+      "concept": "A forward pass is dot products between rows of weights and an activation vector.",
+      "eli5": "Each output is a shopping receipt: multiply what came in by each price, then add it all up.",
+      "id": "found.forward-pass",
+      "lab_target": "layer.weight",
+      "lab_view": "ternary",
+      "prerequisites": [
+        "found.tensor"
+      ],
+      "title": "Weights times activations, by hand",
+      "track": "foundations"
+    },
+    {
+      "checkpoint": "patch-round-trip",
+      "concept": "Training nudges weights opposite the gradient of a loss.",
+      "eli5": "Gradient descent is walking downhill in fog: feel the slope under one foot, take a small step.",
+      "id": "found.training",
+      "lab_target": "layer.weight",
+      "lab_view": "diff",
+      "prerequisites": [
+        "found.forward-pass"
+      ],
+      "title": "Loss, gradients, and why weights move",
+      "track": "foundations"
+    },
+    {
+      "checkpoint": "graph-fully-reachable",
+      "concept": "A layer is a named block of weights with a fixed shape.",
+      "eli5": "A layer is a shelf in a warehouse: one address, many boxes.",
+      "id": "dl.layers",
+      "lab_target": "layer.weight",
+      "lab_view": "heatmap",
+      "prerequisites": [
+        "found.forward-pass"
+      ],
+      "title": "Layers as weight blocks",
+      "track": "deep-learning"
+    },
+    {
+      "checkpoint": "graph-fully-reachable",
+      "concept": "Attention routes information from sets of positions to sets of positions, which is an ultra-edge.",
+      "eli5": "A neighborhood mail route delivers to a whole street at once, not one house.",
+      "id": "dl.attention",
+      "lab_target": "layer.weight",
+      "lab_view": "graph",
+      "prerequisites": [
+        "dl.layers"
+      ],
+      "title": "Attention heads as ultra-edges",
+      "track": "deep-learning"
+    },
+    {
+      "checkpoint": "scales-positive",
+      "concept": "Distances between embedding rows encode similarity.",
+      "eli5": "Words are cities on a map; similar meanings sit closer together.",
+      "id": "dl.embeddings",
+      "lab_target": "embed.weight",
+      "lab_view": "heatmap",
+      "prerequisites": [
+        "dl.layers"
+      ],
+      "title": "Geometry of embedding weights",
+      "track": "deep-learning"
+    },
+    {
+      "checkpoint": "sparsity-at-least",
+      "concept": "Sparsity trades capacity for generalization; measure both.",
+      "eli5": "A backpack with fewer tools is easier to carry, as long as you keep the ones you need.",
+      "id": "dl.overfitting",
+      "lab_target": "layer.weight",
+      "lab_view": "sparsity-histogram",
+      "prerequisites": [
+        "dl.layers"
+      ],
+      "title": "More weights is not better",
+      "track": "deep-learning"
+    },
+    {
+      "checkpoint": "scales-positive",
+      "concept": "Token ids index embedding rows; weights are selected by data.",
+      "eli5": "Tokens are page numbers; the embedding table is the book.",
+      "id": "llm.tokens",
+      "lab_target": "embed.weight",
+      "lab_view": "heatmap",
+      "prerequisites": [
+        "dl.embeddings"
+      ],
+      "title": "From bytes to tokens",
+      "track": "llms"
+    },
+    {
+      "checkpoint": "reconstruction-error-at-most",
+      "concept": "Each head owns a slice of the projection weights.",
+      "eli5": "A head is one reader in a study group, each skimming a different chapter.",
+      "id": "llm.attention-heads",
+      "lab_target": "layer.weight",
+      "lab_view": "ternary",
+      "prerequisites": [
+        "dl.attention"
+      ],
+      "title": "Attention heads in a tiny model",
+      "track": "llms"
+    },
+    {
+      "checkpoint": "graph-fully-reachable",
+      "concept": "Routing selects expert blocks; the selection pattern is a directed graph.",
+      "eli5": "A hospital receptionist sends you to the right specialist, not all of them.",
+      "id": "llm.moe",
+      "lab_target": "layer.weight",
+      "lab_view": "graph",
+      "prerequisites": [
+        "llm.attention-heads"
+      ],
+      "title": "Mixture of experts as routing edges",
+      "track": "llms"
+    },
+    {
+      "checkpoint": "patch-round-trip",
+      "concept": "Context changes activations, not weights; the two must not be confused.",
+      "eli5": "Weights are the recipe, context is the ingredients you happen to have.",
+      "id": "llm.context",
+      "lab_target": "layer.weight",
+      "lab_view": "heatmap",
+      "prerequisites": [
+        "llm.tokens"
+      ],
+      "title": "How weights shape context",
+      "track": "llms"
+    },
+    {
+      "checkpoint": "sparsity-at-least",
+      "concept": "Each weight becomes -1, 0, or +1; two bits per value.",
+      "eli5": "Dimmer switches become light switches: dim, off, bright. Cheaper and much faster.",
+      "id": "wp.ternary",
+      "lab_target": "layer.weight",
+      "lab_view": "ternary",
+      "prerequisites": [
+        "found.tensor"
+      ],
+      "title": "Ternary weights: the light-switch model",
+      "track": "weight-programming"
+    },
+    {
+      "checkpoint": "reconstruction-error-at-most",
+      "concept": "A threshold decides the trit; a per-group scale restores magnitude.",
+      "eli5": "Round the pennies for the pocket, keep the dollars for the bank.",
+      "id": "wp.quantization",
+      "lab_target": "layer.weight",
+      "lab_view": "sparsity-histogram",
+      "prerequisites": [
+        "wp.ternary"
+      ],
+      "title": "Thresholds and scales",
+      "track": "weight-programming"
+    },
+    {
+      "checkpoint": "graph-fully-reachable",
+      "concept": "Pruning removes coordinates and edges while preserving invariants.",
+      "eli5": "Cutting roads only helps if the towns you care about stay connected.",
+      "id": "wp.pruning",
+      "lab_target": "layer.weight",
+      "lab_view": "graph",
+      "prerequisites": [
+        "dl.attention",
+        "wp.ternary"
+      ],
+      "title": "Sparsity and ultra-edge cuts",
+      "track": "weight-programming"
+    },
+    {
+      "checkpoint": "patch-round-trip",
+      "concept": "A diff is a reversible edit set bound to a base snapshot identity.",
+      "eli5": "Keep the receipt, not the whole grocery store; you can always reconstruct the trip.",
+      "id": "wp.diff",
+      "lab_target": "layer.weight",
+      "lab_view": "diff",
+      "prerequisites": [
+        "found.training"
+      ],
+      "title": "Versioning weights with receipts",
+      "track": "weight-programming"
+    },
+    {
+      "checkpoint": "reconstruction-error-at-most",
+      "concept": "Inference reads weights and writes activations; ternary kernels trade accuracy for speed.",
+      "eli5": "Cooking dinner uses the recipe and the pantry; you do not rewrite the recipe each time.",
+      "id": "sys.inference",
+      "lab_target": "layer.weight",
+      "lab_view": "ternary",
+      "prerequisites": [
+        "llm.tokens"
+      ],
+      "title": "What happens at query time",
+      "track": "ai-systems"
+    },
+    {
+      "checkpoint": "patch-round-trip",
+      "concept": "Agents drive the same operations through MCP tools, so results are identical.",
+      "eli5": "A robot arm using your own tools is still your workshop.",
+      "id": "sys.agents",
+      "lab_target": "layer.weight",
+      "lab_view": "diff",
+      "prerequisites": [
+        "wp.diff"
+      ],
+      "title": "Let an agent program your weights",
+      "track": "ai-systems"
+    }
+  ],
+  "op": "learn"
+}

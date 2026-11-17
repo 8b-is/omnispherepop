@@ -131,6 +131,22 @@ scripts/                site build, owner drift check, kernel parity check
 docs/                   architecture, roadmap, release status
 ```
 
+## Publishing
+
+Three homes, because ownership is joint: the GitHub org is canonical, a personal
+GitHub account mirrors it, and Codeberg mirrors it for anyone who wants a non-US host.
+
+```bash
+bash scripts/setup-remotes.sh --with-codeberg   # wire origin, peter, codeberg
+git push -u origin main --tags                  # canonical first
+git push peter main --tags
+git push codeberg main --tags
+```
+
+Creating those repositories is an owner action; this script only wires URLs. Until
+they exist, the repository is local only — no tag has been pushed, and no release
+claims have been made.
+
 ## Governance
 
 Jointly owned by Peter Lodri Sec, 88B (8b-is), and Standard Galactic. See

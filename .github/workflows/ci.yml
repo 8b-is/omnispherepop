@@ -1,0 +1,115 @@
+name: ci
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  owners:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: identity drift
+        run: bash scripts/sync-owners.sh --check
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: format
+        run: cargo fmt --all -- --check
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: test
+        run: cargo test --workspace
+
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: build
+        run: cargo build -q -p ospop-cli -p ospop-mcp
+      - name: quantize e2e
+        run: |
+          cargo run -q -p ospop-cli -- --json quantize --group-size 128 | tee /tmp/q.json
+          python3 - <<'PY'
+          import json
+          q = json.load(open('/tmp/q.json'))
+          assert q['packed_bytes'] * 8 < q['float_bytes'], q
+          assert q['sparsity'] >= 0.4, q
+          assert q['min_scale'] > 0.0, q
+          print('quantize ok:', q['packed_bytes'], 'bytes vs', q['float_bytes'])
+          PY
+      - name: every lesson checkpoint
+        run: |
+          for lesson in $(cargo run -q -p ospop-cli -- learn --json | python3 -c 'import sys,json;print(" ".join(l["id"] for l in json.load(sys.stdin)["lessons"]))'); do
+            cargo run -q -p ospop-cli -- --json learn "$lesson" | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d["checkpoint_passed"], d'
+          done
+          echo "all lesson checkpoints passed"
+      - name: mcp handshake
+        run: |
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"ospop_quantize","arguments":{"tensor":"layer.weight"}}}' \
+            | cargo run -q -p ospop-mcp > /tmp/mcp.jsonl
+          python3 - <<'PY'
+          import json
+          msgs = [json.loads(l) for l in open('/tmp/mcp.jsonl') if l.strip()]
+          tools = next(m for m in msgs if m.get('id') == 2)
+          assert len(tools['result']['tools']) == 8, tools
+          call = next(m for m in msgs if m.get('id') == 3)
+          assert not call['result'].get('isError'), call
+          print('mcp ok: 8 tools, call succeeded')
+          PY
+
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: Swatinem/rust-cache@v2
+      - name: build academy pages
+        run: bash scripts/build-site.sh
+      - name: browser kernel parity
+        run: node scripts/check-parity.mjs
+      - name: static assets exist and pages are non-empty
+        run: |
+          test -s site/assets/ospop.js
+          test -s site/assets/app.js
+          test -s site/assets/site.css
+          test -s site/assets/curriculum.json
+          count=$(find site/academy -name '*.html' | wc -l)
+          test "$count" -ge 18
+          grep -q 'omnispherepop' site/index.html
+          if grep -rq 'http://' site/assets site/index.html; then
+            echo "insecure http:// reference in site" >&2
+            exit 1
+          fi
+          echo "site ok: $count pages"
+
+  workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: actionlint
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- -b /usr/local/bin
+          actionlint -color

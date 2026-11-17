@@ -1,0 +1,23 @@
+# Single source of truth for project identity.
+# Drift is enforced by scripts/sync-owners.sh --check in CI; do not hardcode
+# owner names, the repo URL, or the license string anywhere else.
+
+[project]
+name = "omnispherepop"
+org = "omnispherepop"
+repo = "https://github.com/omnispherepop/omnispherepop"
+license = "MIT OR Apache-2.0"
+copyright = "Copyright 2026 Peter Lodri Sec, 88B (8b-is), Standard Galactic"
+
+[[owner]]
+name = "Peter Lodri Sec"
+github = "PeterLodriSec"
+
+[[owner]]
+name = "88B"
+org = "8b-is"
+github = "8b-is"
+
+[[owner]]
+name = "Standard Galactic"
+github = "StandardGalactic"

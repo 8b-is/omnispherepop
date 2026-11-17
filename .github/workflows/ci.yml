@@ -121,8 +121,9 @@ jobs:
           submodules: recursive
       - name: actionlint
         run: |
-          # /usr/bin is read-only on the runner image; install into $HOME/bin.
+          # This script takes positional [VERSION] [DEST]; /usr/bin is read-only.
           mkdir -p "$HOME/bin"
           curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
-            | bash -s -- -b "$HOME/bin"
+            -o /tmp/download-actionlint.bash
+          bash /tmp/download-actionlint.bash latest "$HOME/bin"
           "$HOME/bin/actionlint" -color

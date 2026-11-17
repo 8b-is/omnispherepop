@@ -1,4 +1,4 @@
-use omnispherepop_core::graph::Graph;
+use ospop_core::graph::Graph;
 fn names(a: &[&str]) -> Vec<String> {
     a.iter().map(|s| s.to_string()).collect()
 }

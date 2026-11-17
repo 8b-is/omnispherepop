@@ -1,4 +1,4 @@
-use omnispherepop_core::{
+use ospop_core::{
     quantize::{dot, quantize, reconstruct},
     ternary::Trit::*,
 };

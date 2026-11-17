@@ -1,4 +1,4 @@
-use omnispherepop_core::ternary::{pack, unpack, Trit::*};
+use ospop_core::ternary::{pack, unpack, Trit::*};
 
 #[test]
 fn known_bytes() {

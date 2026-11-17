@@ -340,13 +340,13 @@ mod tests {
 
         // Shape that disagrees with the byte range.
         let bytes = write_f32(&[("a", &[1.0, 2.0])]);
-        let mut tampered = bytes.clone();
         let hlen = u64::from_le_bytes(bytes[..8].try_into().unwrap()) as usize;
         let h: serde_json::Value = serde_json::from_slice(&bytes[8..8 + hlen]).unwrap();
         let mut obj = h.as_object().unwrap().clone();
         obj.get_mut("a").unwrap()["shape"] = serde_json::json!([3]);
         let new_header = serde_json::to_vec(&serde_json::Value::Object(obj.clone())).unwrap();
-        tampered.truncate(0);
+        // Same header, but with a shape that needs 12 bytes instead of 8.
+        let mut tampered = Vec::new();
         tampered.extend_from_slice(&(new_header.len() as u64).to_le_bytes());
         tampered.extend_from_slice(&new_header);
         tampered.extend_from_slice(&bytes[8 + hlen..]);

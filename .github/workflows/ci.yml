@@ -77,10 +77,10 @@ jobs:
           import json
           msgs = [json.loads(l) for l in open('/tmp/mcp.jsonl') if l.strip()]
           tools = next(m for m in msgs if m.get('id') == 2)
-          assert len(tools['result']['tools']) == 8, tools
+          assert len(tools['result']['tools']) == 9, tools
           call = next(m for m in msgs if m.get('id') == 3)
           assert not call['result'].get('isError'), call
-          print('mcp ok: 8 tools, call succeeded')
+          print('mcp ok: 9 tools, call succeeded')
           PY
 
   site:
@@ -121,5 +121,8 @@ jobs:
           submodules: recursive
       - name: actionlint
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- -b /usr/local/bin
-          actionlint -color
+          # /usr/bin is read-only on the runner image; install into $HOME/bin.
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
+            | bash -s -- -b "$HOME/bin"
+          "$HOME/bin/actionlint" -color
